@@ -6,7 +6,6 @@ import Slider from "react-slick";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-// Custom Arrows
 function NextArrow({ onClick }: any) {
     return (
         <button
@@ -40,17 +39,16 @@ export default function Categories({
 
     const settings = {
         dots: false,
-        infinite: categories?.length > 6, // only loop if many
+        infinite: categories?.length > 6,
         speed: 500,
         slidesToShow: 6,
         slidesToScroll: 1,
         autoplay: true,
         autoplaySpeed: 2500,
-        initialSlide: 0, // ✅ ensures starts from first
         nextArrow: <NextArrow />,
         prevArrow: <PrevArrow />,
-        swipeToSlide: true, // ✅ touch-friendly
-        pauseOnHover: true, // ✅ pause autoplay on hover
+        swipeToSlide: true,
+        pauseOnHover: true,
         responsive: [
             {
                 breakpoint: 1280,
@@ -65,6 +63,7 @@ export default function Categories({
                 settings: { slidesToShow: 3 },
             },
             {
+                // ✅ Show 2 cards per slide on small devices
                 breakpoint: 480,
                 settings: { slidesToShow: 2 },
             },
@@ -84,7 +83,7 @@ export default function Categories({
                             key={i}
                             className="flex flex-col items-center p-4 bg-white rounded-xl shadow-sm animate-pulse"
                         >
-                            <Skeleton className="w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full" />
+                            <Skeleton className="w-[90px] h-[90px] rounded-full" />
                             <Skeleton className="w-16 h-3 mt-3 rounded-md" />
                         </div>
                     ))}
@@ -95,16 +94,17 @@ export default function Categories({
                         <div key={cat._id} className="px-2">
                             <Link href={`/categories/${cat._id}`}>
                                 <div className="flex flex-col items-center bg-white rounded-xl shadow-sm hover:shadow-md p-4 cursor-pointer transition">
-                                    <div className="relative w-[70px] h-[70px] md:w-[90px] md:h-[90px]">
+                                    {/* ✅ Fix image circle overflow + perfect responsive sizing */}
+                                    <div className="relative w-[60px] h-[60px] sm:w-[100px] sm:h-[100px] overflow-hidden rounded-full border">
                                         <Image
                                             src={cat.image || "/category-placeholder.svg"}
                                             alt={cat.name}
                                             fill
-                                            className="object-cover rounded-full border"
-                                            sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 200px"
+                                            className="object-cover"
+                                            sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 100px"
                                         />
                                     </div>
-                                    <p className="text-xs md:text-sm font-medium text-gray-700 mt-2 text-center">
+                                    <p className="text-xs md:text-sm font-medium text-gray-700 mt-2 text-center truncate w-[90px] sm:w-[110px]">
                                         {cat.name}
                                     </p>
                                 </div>

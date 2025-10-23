@@ -90,7 +90,7 @@ export default function Suppliers({ location }) {
 
     return (
         <section className="px-4 py-8 max-w-7xl mx-auto">
-            <h2 className="text-xl font-bold mb-6 text-gray-500">{total} Stores Delivering to You</h2>
+            <h2 className="text-sm md:text-xl font-bold mb-6 text-gray-500">{total} Stores Delivering to You</h2>
 
             <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {supplierList.map((s: any) => {
