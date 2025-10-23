@@ -18,7 +18,7 @@ export default function HomePage() {
     return (
         <>
             <Header />
-            <div style={{ marginTop: "100px" }} />
+            <div className='mt-[220px] md:mt-[100px]' />
             <Banner />
             <Categories categories={categories?._payload || []} loading={isLoading} />
             <Suppliers location={locationData} />

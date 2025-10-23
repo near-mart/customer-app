@@ -66,7 +66,7 @@ export default function Banner() {
                 {banners.map((banner, i) => (
                     <div key={i} className="relative w-full px-2 sm:px-3 lg:px-4">
                         <Link href={banner.href} aria-label={banner.alt}>
-                            <div className="relative w-full h-[100px] sm:h-[130px] md:h-[160px] lg:h-[240px] xl:h-[250px]">
+                            <div className="relative w-full h-[150px] sm:h-[130px] md:h-[160px] lg:h-[240px] xl:h-[250px]">
                                 <Image
                                     src={banner.src}
                                     alt={banner.alt}
