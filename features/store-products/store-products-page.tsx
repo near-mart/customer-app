@@ -61,7 +61,7 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
 
             {/* 🏪 Store Heading */}
 
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
                 Welcome to {supplier?.storeName || "Our Store"}
             </h1>
 
@@ -77,7 +77,7 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
                     </Link>
 
                     {/* 🧱 Subcategory Grid */}
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-6 gap-2">
                         {parent.children?.length > 0 ? (
                             parent.children.map((child: any) => (
                                 <Link
