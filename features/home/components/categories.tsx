@@ -14,7 +14,7 @@ export default function Categories({
     const skeletonArray = Array.from({ length: 6 });
 
     return (
-        <section className="max-w-7xl mx-auto px-4 py-6 relative">
+        <section className="max-w-7xl mx-auto px-4 py-2 relative">
             <h2 className="text-lg sm:text-xl font-semibold mb-5 text-primary">
                 🛍️ Shop by Category
             </h2>

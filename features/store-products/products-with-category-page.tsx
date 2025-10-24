@@ -142,7 +142,7 @@ export default function ProductsWithCategoryPage({
                                 height={32}
                                 className="rounded-full border mb-1 sm:mb-0"
                             />
-                            <span className="sm:ml-2 text-wrap leading-tight text-[10px] sm:text-[13px] break-words">
+                            <span className="sm:ml-2 text-wrap leading-tight text-[11px] sm:text-[13px] wrap-break-word">
                                 All
                             </span>
                         </button>
@@ -164,7 +164,7 @@ export default function ProductsWithCategoryPage({
                                     height={32}
                                     className="rounded-full border mb-1 sm:mb-0"
                                 />
-                                <span className="sm:ml-2 leading-tight text-[9px] sm:text-[13px] break-words">
+                                <span className="sm:ml-2 leading-tight text-[11px] sm:text-[13px] break-words">
                                     {sub.name}
                                 </span>
                             </button>

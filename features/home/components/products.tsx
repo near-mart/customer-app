@@ -24,7 +24,7 @@ export default function Products({ products = [], loading }) {
     return (
         <section className="px-4 py-4 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-4">
-                <h1 className="text-lg md:text-xl font-bold text-gray-800">
+                <h1 className="text-md md:text-xl font-bold text-gray-800">
                     Discover Fresh Products Near You 🛒
                 </h1>
 

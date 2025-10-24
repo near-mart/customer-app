@@ -22,7 +22,7 @@ export default function HomePage() {
     return (
         <>
             <Header />
-            <div className='mt-[280px] md:mt-[160px]' />
+            <div className='mt-[230px] md:mt-[160px]' />
             <Banner />
             <Categories categories={categories?._payload || []} loading={isLoading} />
             <Products products={products?._payload || []} loading={isProductLoading} />
