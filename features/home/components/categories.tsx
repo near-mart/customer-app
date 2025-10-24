@@ -32,7 +32,6 @@ export default function Categories({
                     ))}
                 </div>
             ) : (
-                // ✅ Scrollable horizontal container with snap
                 <div
                     className="
             flex overflow-x-auto snap-x snap-mandatory 
@@ -42,11 +41,11 @@ export default function Categories({
                     {categories?.map((cat) => (
                         <div
                             key={cat._id}
-                            className="snap-start flex-shrink-0 w-[45%] sm:w-[18%] md:w-[15%] lg:w-[13%]"
+                            className="snap-start shrink-0 w-[45%] sm:w-[18%] md:w-[15%] lg:w-[13%]"
                         >
                             <Link href={`/categories/${cat._id}`}>
                                 <div className="flex flex-col items-center bg-white rounded-xl shadow-sm hover:shadow-md py-4 px-3 cursor-pointer transition">
-                                    <div className="relative w-[70px] h-[70px] sm:w-[100px] sm:h-[100px] overflow-hidden rounded-full border border-gray-200 flex-shrink-0">
+                                    <div className="relative w-[70px] h-[70px] sm:w-[100px] sm:h-[100px] overflow-hidden rounded-full border border-gray-200 shrink-0">
                                         <Image
                                             src={cat.image || "/category-placeholder.svg"}
                                             alt={cat.name}
@@ -55,7 +54,7 @@ export default function Categories({
                                             sizes="(max-width:768px) 50vw, (max-width:1200px) 25vw, 100px"
                                         />
                                     </div>
-                                    <p className="text-xs sm:text-sm font-medium text-gray-700 mt-2 text-center truncate w-full">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-700 mt-2 text-center line-clamp-2  w-full">
                                         {cat.name}
                                     </p>
                                 </div>

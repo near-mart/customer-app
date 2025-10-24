@@ -1,6 +1,6 @@
 import { api } from "@/lib/AxiosInstants";
 
-export const fetchSupplier = async (signal: any, params: { page?: number, page_size?: number, search?: string, supplier?: string, location?: any }) => {
+export const fetchSupplier = async (signal: any, params: { page?: number, page_size?: number, search?: string, supplier?: string, location?: any, categories?: any, handle?: string }) => {
     try {
         const response = await api.get("/service/customer_service/v1/no-auth/web/suppliers", { signal, params: { ...params } })
         return response.data

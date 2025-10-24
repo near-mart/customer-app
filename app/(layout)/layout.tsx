@@ -1,3 +1,4 @@
+import Header from "@/layout/header/header";
 
 export default function RootLayout({
   children,
@@ -5,7 +6,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-
-    children
+    <>
+      <Header noTabs={false} />
+      <div className='mt-[200px] md:mt-[80px]' />
+      {children}
+    </>
   );
 }

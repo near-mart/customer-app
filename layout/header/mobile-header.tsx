@@ -51,7 +51,7 @@ export default function MobileHeader() {
             <div className="flex flex-col mt-2">
                 <h2 className="flex items-center" data-testid="delivery-time">
                     <ArrowIcon className="w-6 h-6" />
-                    <span className="ml-1 font-bold text-[#ef4372] text-base flex flex-wrap items-center gap-x-1">
+                    <span className="ml-1 font-bold text-[#ef4372] text-xs md:text-base flex flex-wrap items-center gap-x-1">
                         <span className="block">Tomorrow — </span>
                         <span className="block font-bold text-[#ef4372]">
                             Estimated delivery before 12
@@ -63,7 +63,7 @@ export default function MobileHeader() {
                     type="button"
                     className="flex items-center text-ellipsis overflow-hidden whitespace-nowrap mt-1"
                 >
-                    <h3 className="text-sm font-semibold text-black truncate max-w-full">
+                    <h3 className="text-xs md:text-sm font-semibold text-black truncate max-w-full">
                         {displayAddress}
                     </h3>
                     <svg
