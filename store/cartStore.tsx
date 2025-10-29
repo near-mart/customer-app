@@ -12,51 +12,162 @@ interface CartItem {
     selling_qty?: number;
 }
 
-interface CartStore {
+interface SupplierCart {
+    supplierId: string;
+    supplierName?: string;
     items: CartItem[];
-    addOrReplace: (item: CartItem) => void; // 👈 new logic
-    increment: (productId: string) => void;
-    decrement: (productId: string) => void;
-    getQty: (productId: string) => number;
-    getVariantId: (productId: string) => string | null;
-    clearCart: () => void;
+}
+
+interface CartStore {
+    suppliers: Record<string, SupplierCart>;
+    lastAction: string | null;
+
+    addOrReplace: (supplierId: string, supplierName: string, item: CartItem) => void;
+    increment: (supplierId: string, supplierName: string, item: CartItem) => void;
+    decrement: (supplierId: string, supplierName: string, item: CartItem) => void;
+    getQty: (supplierId: string, productId: string) => number;
+    getVariantId: (supplierId: string, productId: string) => string | null;
+    clearSupplierCart: (supplierId: string) => void;
+    clearAll: () => void;
+    recalcTotal: (supplierId: string) => void;
 }
 
 export const useCartStore = create<CartStore>()(
     persist(
         (set, get) => ({
-            items: [],
+            suppliers: {},
+            lastAction: null,
 
-            addOrReplace: (item) => {
-                // remove any existing variant of same product
-                const filtered = get().items.filter((x) => x.productId !== item.productId);
-                set({ items: [...filtered, { ...item, qty: 1 }] });
+            // 🛒 Add or replace product
+            addOrReplace: (supplierId, supplierName, item) => {
+                const cart = get().suppliers[supplierId] || {
+                    supplierId,
+                    supplierName,
+                    items: [],
+                    totalAmount: 0,
+                };
+                const filtered = cart.items.filter((x) => x.productId !== item.productId);
+                const updatedItems = [...filtered, { ...item, qty: 1 }];
+                set({
+                    suppliers: {
+                        ...get().suppliers,
+                        [supplierId]: { ...cart, items: updatedItems, },
+                    },
+                    lastAction: "add",
+                });
             },
 
-            increment: (productId) =>
+            // ➕ Increment — if not exists, create first
+            increment: (supplierId, supplierName, item) => {
+                const cart = get().suppliers[supplierId];
+                if (!cart) {
+                    // create new supplier entry
+                    set({
+                        suppliers: {
+                            ...get().suppliers,
+                            [supplierId]: {
+                                supplierId,
+                                supplierName,
+                                items: [{ ...item, }],
+                            },
+                        },
+                        lastAction: "add",
+                    });
+                    return;
+                }
+
+                const exists = cart.items.find((x) => x.productId === item.productId);
+                const updatedItems = exists
+                    ? cart.items.map((x) =>
+                        x.productId === item.productId ? { ...x, qty: x.qty + 1 } : x
+                    )
+                    : [...cart.items, { ...item }];
+
                 set({
-                    items: get().items.map((x) =>
-                        x.productId === productId ? { ...x, qty: x.qty + 1 } : x
-                    ),
-                }),
+                    suppliers: {
+                        ...get().suppliers,
+                        [supplierId]: { ...cart, items: updatedItems, },
+                    },
+                    lastAction: "increment",
+                });
+            },
 
-            decrement: (productId) =>
+            // ➖ Decrement — if not exists, add one (qty:1)
+            decrement: (supplierId, supplierName, item) => {
+                const cart = get().suppliers[supplierId];
+                if (!cart) {
+                    set({
+                        suppliers: {
+                            ...get().suppliers,
+                            [supplierId]: {
+                                supplierId,
+                                supplierName,
+                                items: [{ ...item }],
+                            },
+                        },
+
+                        lastAction: "add",
+                    });
+                    return;
+                }
+
+                const exists = cart.items.find((x) => x.productId === item.productId);
+                if (!exists) {
+                    const updatedItems = [...cart.items, { ...item }];
+                    set({
+                        suppliers: {
+                            ...get().suppliers,
+                            [supplierId]: { ...cart, items: updatedItems, },
+                        },
+                        lastAction: "add",
+                    });
+                    return;
+                }
+
+                const updatedItems = cart.items
+                    .map((x) =>
+                        x.productId === item.productId ? { ...x, qty: Math.max(0, x.qty - 1) } : x
+                    )
+                    .filter((x) => x.qty > 0);
+
                 set({
-                    items: get().items
-                        .map((x) =>
-                            x.productId === productId ? { ...x, qty: x.qty - 1 } : x
-                        )
-                        .filter((x) => x.qty > 0),
-                }),
+                    suppliers: {
+                        ...get().suppliers,
+                        [supplierId]: { ...cart, items: updatedItems, },
+                    },
+                    lastAction: "decrement",
+                });
+            },
 
-            getQty: (productId) =>
-                get().items.find((x) => x.productId === productId)?.qty || 0,
+            getQty: (supplierId, productId) =>
+                get().suppliers[supplierId]?.items.find((x) => x.productId === productId)?.qty || 0,
 
-            getVariantId: (productId) =>
-                get().items.find((x) => x.productId === productId)?.variantId || null,
+            getVariantId: (supplierId, productId) =>
+                get().suppliers[supplierId]?.items.find((x) => x.productId === productId)?.variantId ||
+                null,
 
-            clearCart: () => set({ items: [] }),
+            clearSupplierCart: (supplierId) => {
+                const suppliers = { ...get().suppliers };
+                delete suppliers[supplierId];
+                set({ suppliers, lastAction: "clearSupplier" });
+            },
+
+            clearAll: () => set({ suppliers: {}, lastAction: "clearAll" }),
+
+            recalcTotal: (supplierId) => {
+                const cart = get().suppliers[supplierId];
+                if (!cart) return;
+                set({
+                    suppliers: {
+                        ...get().suppliers,
+                        [supplierId]: { ...cart, },
+                    },
+                });
+            },
         }),
-        { name: "cart-storage" }
+        {
+            name: "supplier-cart-storage",
+            partialize: (state) => ({ suppliers: state.suppliers }),
+        }
     )
 );

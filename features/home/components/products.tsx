@@ -20,6 +20,9 @@ export default function Products({ products = [], loading }) {
             </section>
         );
     }
+    if (!products?.length) {
+        return
+    }
 
     return (
         <section className="px-4 py-4 max-w-7xl mx-auto">
@@ -39,9 +42,11 @@ export default function Products({ products = [], loading }) {
                 )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {products.map((p) => (
-                    <ProductCard key={p._id} product={p} />
-                ))}
+                {products.map((p) => {
+                    return (
+                        <ProductCard key={p._id} product={p} deliveryNotAllow={p.deliveryNotAllowed} />
+                    )
+                })}
             </div>
         </section>
     );

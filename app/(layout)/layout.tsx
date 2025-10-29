@@ -8,7 +8,7 @@ export default function RootLayout({
   return (
     <>
       <Header noTabs={false} />
-      <div className='mt-[150px] md:mt-[80px]' />
+      <div className='mt-[165px] md:mt-20' />
       {children}
     </>
   );
