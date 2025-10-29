@@ -1,5 +1,6 @@
 // api.js
 import { notify } from '@/functions/notify';
+import { fetchRefreshToken } from '@/services/suppliers';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
@@ -8,8 +9,6 @@ const api = axios.create({
     baseURL: process.env.BASE_URL,
     withCredentials: true,
 });
-
-// Add request interceptor
 api.interceptors.request.use(
     async (config: any) => {
         let token = localStorage.getItem('accessToken');
@@ -17,7 +16,7 @@ api.interceptors.request.use(
             try {
                 const { exp }: { exp: number } = jwtDecode(token);
                 if (exp < Date.now() / 1000 && config.url !== 'auth/refresh-token') {
-                    // 
+                    await fetchRefreshToken({ user: localStorage.getItem("user") })
                 }
             } catch (err) {
                 console.log(err);

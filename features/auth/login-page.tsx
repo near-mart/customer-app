@@ -65,6 +65,7 @@ export default function LoginPage() {
             const { accessToken, user } = data?._payload || {};
             if (accessToken && user) {
                 localStorage.setItem("accessToken", accessToken);
+                localStorage.setItem("user", user?._id);
                 handleUserDetails(user);
                 handleAuthenticate(true);
                 notify("Login successful!", "success");

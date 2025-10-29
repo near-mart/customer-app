@@ -1,30 +1,67 @@
 import { NextResponse, NextRequest } from "next/server";
 
-// ✅ Middleware function
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    // 🍪 Read token from cookies (set by backend)
-    const token = request.cookies.get("access_token")?.value;
+    let token = request.cookies.get("access_token")?.value;
+    let refreshToken = request.cookies.get("refresh_token")?.value;
 
-    // 🔒 If user is logged in, prevent access to auth pages
-    if (token && (pathname.startsWith("/login") || pathname.startsWith("/register"))) {
-        // Redirect logged-in user away from login/register
-        return NextResponse.redirect(new URL("/", request.url)); // redirect to homepage or dashboard
+    if (!token && refreshToken) {
+        try {
+            const res = await fetch(`${process.env.BASE_URL}/service/customer_service/v1/no-auth/refresh-token`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ refresh_token: refreshToken }),
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                token = data?._payload?.accessToken;
+                if (data?._payload?.refreshToken) {
+                    refreshToken = data?._payload?.refreshToken;
+                }
+                const response = NextResponse.next();
+                response.cookies.set("access_token", token, {
+                    httpOnly: true,
+                    secure: true,
+                    maxAge: 60 * 60 * 1000,  // 1 hour expiration
+                    sameSite: "none",
+                    path: "/",
+                });
+                response.cookies.set("refresh_token", refreshToken, {
+                    httpOnly: true,
+                    secure: true,
+                    maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days expiration
+                    sameSite: "none",
+                    path: "/",
+                });
+                return response;
+            } else {
+                console.log("Token refresh failed");
+            }
+        } catch (error) {
+            console.error("Error refreshing token:", error);
+        }
     }
 
-    // 🛑 If user is not logged in, block access to protected routes
-    const protectedRoutes = ["/account", "/orders", "/profile", "/checkout", "/cart"]; // add your secure routes
+    // 🔒 Auth route protection logic
+    const protectedRoutes = ["/account", "/orders", "/profile", "/checkout", "/cart"];
+
+    // If logged in, prevent access to login/register
+    if (token && (pathname.startsWith("/login") || pathname.startsWith("/register"))) {
+        return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    // If not logged in, block protected routes
     if (!token && protectedRoutes.some((route) => pathname.startsWith(route))) {
-        // Redirect to login page
         return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // ✅ Otherwise, continue
     return NextResponse.next();
 }
 
-// ✅ Apply middleware globally or selectively
 export const config = {
     matcher: [
         "/login",
@@ -33,6 +70,6 @@ export const config = {
         "/orders/:path*",
         "/profile/:path*",
         "/checkout/:path*",
-        "/cart"
+        "/cart",
     ],
 };

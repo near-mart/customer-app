@@ -101,6 +101,7 @@ export default function RegisterPage() {
             const { accessToken, ...rest } = data?._payload || {};
             if (data && accessToken) {
                 localStorage.setItem("accessToken", accessToken);
+                localStorage.setItem("user", rest?.user?._id);
                 handleUserDetails(rest.user);
                 handleAuthenticate(true);
                 notify("Registration successful", "success");

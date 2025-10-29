@@ -24,3 +24,11 @@ export const fetchDeliverySettings = async (signal: any, supplier: string) => {
         console.log(err);
     }
 }
+export const fetchRefreshToken = async (data) => {
+    try {
+        const response = await api.post(`/service/customer_service/v1/no-auth/refresh-token`, data)
+        return response.data
+    } catch (err: any) {
+        console.log(err);
+    }
+}
