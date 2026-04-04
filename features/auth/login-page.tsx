@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,11 @@ import axios from "axios";
 import { notify } from "@/functions/notify";
 import { useRouter } from "next/navigation";
 import { useAuthValidator } from "@/store/authValidater";
+import { useBookmarkStore } from "@/store/bookmarkStore";
+import { supplierBookMarkMerge } from "@/services/suppliers";
+import { mergeCart, mergeWishlist } from "@/services/products";
+import { useCartStore } from "@/store/cartStore";
+import { useWishlistStore } from "@/store/wishlistStore";
 
 export default function LoginPage() {
     const [mobile, setMobile] = useState("");
@@ -19,11 +25,11 @@ export default function LoginPage() {
 
     const route = useRouter();
     const { handleAuthenticate, handleUserDetails } = useAuthValidator((state) => state);
-
     const countryCode = "91"; // 🇮🇳 default
 
-    // 📤 Send OTP (Login)
-    const handleSendOtp = async () => {
+    // 📤 Send OTP
+    const handleSendOtp = async (e: React.FormEvent) => {
+        e.preventDefault();
         if (mobile.length !== 10) {
             notify("Please enter a valid 10-digit mobile number", "error");
             return;
@@ -36,11 +42,9 @@ export default function LoginPage() {
                 { mobile, countryCode },
                 { withCredentials: true }
             );
-
             notify(data?.message || "OTP sent successfully!", "success");
             setOtpSent(true);
         } catch (err: any) {
-            console.error(err);
             notify(err?.response?.data?.message || "Failed to send OTP", "error");
         } finally {
             setIsLoading(false);
@@ -48,9 +52,10 @@ export default function LoginPage() {
     };
 
     // ✅ Verify OTP
-    const handleVerifyOtp = async () => {
-        if (otp.length !== 4) {
-            notify("Please enter a valid 4-digit OTP", "error");
+    const handleVerifyOtp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (otp.length !== 4 && otp.length !== 6) {
+            notify("Please enter a valid OTP", "error");
             return;
         }
 
@@ -68,14 +73,44 @@ export default function LoginPage() {
                 localStorage.setItem("user", user?._id);
                 handleUserDetails(user);
                 handleAuthenticate(true);
+
+                // Merge local data
+                await mergeLocalData();
+
                 notify("Login successful!", "success");
                 route.replace("/");
             }
         } catch (err: any) {
-            console.error(err);
             notify(err?.response?.data?.message || "Invalid or expired OTP", "error");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    // ♻️ Merge local stores (bookmarks, cart, wishlist)
+    const mergeLocalData = async () => {
+        const localBookmarks = useBookmarkStore.getState().bookmarks;
+        const localCart = useCartStore.getState().suppliers;
+        const localWishlist = useWishlistStore.getState().wishlist;
+
+        try {
+            if (localBookmarks.length) {
+                await supplierBookMarkMerge({ supplier_ids: localBookmarks });
+                useBookmarkStore.getState().clearBookmarks();
+            }
+
+            if (Object.keys(localCart).length) {
+                await mergeCart({ suppliers: localCart });
+                useCartStore.getState().clearAll();
+            }
+
+            if (localWishlist.length) {
+                const productIds = localWishlist.map((item) => item.productId);
+                await mergeWishlist({ wishlist: productIds });
+                useWishlistStore.getState().clearWishlist();
+            }
+        } catch (err) {
+            console.error("❌ Merge error:", err);
         }
     };
 
@@ -88,10 +123,8 @@ export default function LoginPage() {
                 { mobile, countryCode },
                 { withCredentials: true }
             );
-
             notify(data?.message || "OTP resent successfully!", "success");
         } catch (err: any) {
-            console.error(err);
             notify(err?.response?.data?.message || "Failed to resend OTP", "error");
         } finally {
             setResending(false);
@@ -108,71 +141,70 @@ export default function LoginPage() {
                     </p>
                 </div>
 
-                {/* 📱 Mobile Field */}
-                {!otpSent && (
-                    <div className="flex flex-col gap-2 mb-4">
-                        <Label>Mobile Number</Label>
-                        <div className="relative">
-                            <Phone className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
-                            <Input
-                                placeholder="Enter 10-digit mobile number"
-                                className="pl-9"
-                                value={mobile}
-                                maxLength={10}
-                                onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
-                                disabled={isLoading}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* 🟢 OTP Field */}
-                {otpSent && (
-                    <div className="flex flex-col gap-2 mb-4 animate-fadeIn">
-                        <Label>Enter OTP</Label>
-                        <div className="relative">
-                            <KeyRound className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
-                            <Input
-                                placeholder="Enter 6-digit OTP"
-                                className="pl-9"
-                                maxLength={6}
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                            />
-                        </div>
-
-                        <div className="text-right mt-1">
-                            <button
-                                onClick={handleResendOtp}
-                                disabled={resending}
-                                className="text-primary text-sm font-semibold hover:underline disabled:opacity-50"
-                            >
-                                {resending ? "Resending..." : "Resend OTP"}
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* 🔘 OTP Buttons */}
                 {!otpSent ? (
-                    <Button
-                        onClick={handleSendOtp}
-                        className="w-full bg-primary text-white font-semibold py-5 text-base rounded-xl transition"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? "Sending..." : "Send OTP"}
-                    </Button>
+                    <form onSubmit={handleSendOtp} className="flex flex-col gap-4">
+                        <div>
+                            <Label htmlFor="mobile">Mobile Number</Label>
+                            <div className="relative mt-1">
+                                <Phone className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
+                                <Input
+                                    id="mobile"
+                                    placeholder="Enter 10-digit mobile number"
+                                    className="pl-9"
+                                    value={mobile}
+                                    maxLength={10}
+                                    onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
+                                    disabled={isLoading}
+                                />
+                            </div>
+                        </div>
+
+                        <Button
+                            type="submit"
+                            className="w-full bg-primary text-white font-semibold py-5 text-base rounded-xl"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? "Sending..." : "Send OTP"}
+                        </Button>
+                    </form>
                 ) : (
-                    <Button
-                        onClick={handleVerifyOtp}
-                        className="w-full bg-primary text-white font-semibold py-5 text-base rounded-xl transition"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? "Verifying..." : "Verify OTP"}
-                    </Button>
+                    <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
+                        <div>
+                            <Label htmlFor="otp">Enter OTP</Label>
+                            <div className="relative mt-1">
+                                <KeyRound className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
+                                <Input
+                                    id="otp"
+                                    placeholder="Enter OTP"
+                                    className="pl-9"
+                                    value={otp}
+                                    maxLength={6}
+                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                                />
+                            </div>
+
+                            <div className="text-right mt-1">
+                                <button
+                                    type="button"
+                                    onClick={handleResendOtp}
+                                    disabled={resending}
+                                    className="text-primary text-sm font-semibold hover:underline disabled:opacity-50"
+                                >
+                                    {resending ? "Resending..." : "Resend OTP"}
+                                </button>
+                            </div>
+                        </div>
+
+                        <Button
+                            type="submit"
+                            className="w-full bg-primary text-white font-semibold py-5 text-base rounded-xl"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? "Verifying..." : "Verify OTP"}
+                        </Button>
+                    </form>
                 )}
 
-                {/* 🟩 Register Link */}
                 <p className="text-center text-sm text-gray-600 mt-6">
                     Don’t have an account?{" "}
                     <Link href="/register" className="text-primary font-semibold hover:underline">

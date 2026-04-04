@@ -2,13 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSupplier } from "@/services/suppliers";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { getStoreStatus } from "@/functions/supplier";
 import SupplierCard from "@/layout/supplier/supplier-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +12,7 @@ export default function Suppliers({ location, categories }: any) {
     const [category, setCategory] = useState("All");
 
     const { data: suppliers, isLoading } = useQuery({
-        queryKey: ["fetchSupplier", location, category],
+        queryKey: ["fetchSupplier", location?.latitude || null, location?.longitude || null, category],
         queryFn: ({ signal }) =>
             fetchSupplier(signal, {
                 page: 0,
@@ -28,8 +21,9 @@ export default function Suppliers({ location, categories }: any) {
                 longitude: location.longitude,
                 categories: category === "All" ? undefined : category || undefined,
             }),
-        enabled: !!location?.latitude && !!location?.longitude,
+        enabled: !!(location?.latitude && location?.longitude),
     });
+
 
     useEffect(() => {
         if (suppliers?.pagination) {
@@ -42,6 +36,72 @@ export default function Suppliers({ location, categories }: any) {
     return (
         <section className="px-4 py-8 max-w-7xl mx-auto">
             {/* 🧭 Header */}
+            {/* 🍽️ Category Scroll Row */}
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide py-3 px-1 md:px-2 lg:px-0">
+                {/* All Category */}
+                <div
+                    onClick={() => setCategory("All")}
+                    className={`flex-none w-20 sm:w-[90px] md:w-[100px] flex flex-col items-center cursor-pointer transition-transform ${category === "All"
+                        ? "scale-105 text-primary"
+                        : "opacity-80 hover:opacity-100"
+                        }`}
+                >
+                    <div
+                        className={`w-16 h-16 bg-white rounded-full border-2 flex items-center justify-center overflow-hidden transition ${category === "All"
+                            ? "border-primary bg-primary/10"
+                            : "border-gray-200 bg-gray-50"
+                            }`}
+                    >
+                        <Image
+                            src="/all-category.png"
+                            alt="All"
+                            width={48}
+                            height={48}
+                            className="object-cover"
+                        />
+                    </div>
+                    <span
+                        className={`text-xs md:text-sm mt-2 font-medium text-center ${category === "All" ? "text-primary" : "text-gray-600"
+                            }`}
+                    >
+                        All
+                    </span>
+                </div>
+
+                {/* Other Categories */}
+                {categories?.map((cat: any) => (
+                    <div
+                        key={cat._id}
+                        onClick={() => setCategory(cat._id)}
+                        className={`flex-none w-20 sm:w-[90px] md:w-[100px] flex flex-col items-center cursor-pointer transition-transform ${category === cat._id
+                            ? "scale-105 text-primary"
+                            : "opacity-80 hover:opacity-100"
+                            }`}
+                    >
+                        <div
+                            className={`w-16 h-16 rounded-full border-2 overflow-hidden flex items-center bg-white justify-center transition ${category === cat._id
+                                ? "border-primary bg-primary/10"
+                                : "border-gray-200 bg-gray-50"
+                                }`}
+                        >
+                            <Image
+                                src={cat.image || "/category-placeholder.svg"}
+                                alt={cat.name}
+                                width={48}
+                                height={48}
+                                className="object-cover"
+                            />
+                        </div>
+                        <span
+                            className={`text-xs md:text-sm mt-2 font-medium text-center ${category === cat._id ? "text-primary" : "text-gray-600"
+                                }`}
+                        >
+                            {cat.name}
+                        </span>
+                    </div>
+                ))}
+            </div>
+
             <div className="mb-4 flex justify-between items-center flex-wrap gap-3">
                 <h2 className="text-sm md:text-xl font-bold text-gray-700">
                     {isLoading
@@ -52,27 +112,9 @@ export default function Suppliers({ location, categories }: any) {
                                 : "No stores available nearby"
                             : "Getting your location..."}
                 </h2>
-
-                {/* 🧭 Category Filter */}
-                <div>
-                    <Select
-                        value={category}
-                        onValueChange={(val) => setCategory(val)}
-                    >
-                        <SelectTrigger className="w-[250px] md:w-[200px] border-gray-300">
-                            <SelectValue placeholder="Select Category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="All">All</SelectItem>
-                            {categories?.map((it) => (
-                                <SelectItem key={it._id} value={it._id}>
-                                    {it.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
             </div>
+
+
 
             {/* 🧭 Supplier Grid */}
             {isLoading ? (

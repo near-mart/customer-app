@@ -19,6 +19,7 @@ export default function QueryProvider({ children }) {
         })
     );
 
+
     return (
         <QueryClientProvider client={queryClient.current}>
             {children}

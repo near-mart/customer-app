@@ -3,6 +3,8 @@ import { NextResponse, NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
+
+
     let token = request.cookies.get("access_token")?.value;
     let refreshToken = request.cookies.get("refresh_token")?.value;
 
@@ -50,10 +52,10 @@ export async function proxy(request: NextRequest) {
     const protectedRoutes = ["/account", "/orders", "/profile", "/checkout", "/cart"];
 
     // If logged in, prevent access to login/register
+
     if (token && (pathname.startsWith("/login") || pathname.startsWith("/register"))) {
         return NextResponse.redirect(new URL("/", request.url));
     }
-
     // If not logged in, block protected routes
     if (!token && protectedRoutes.some((route) => pathname.startsWith(route))) {
         return NextResponse.redirect(new URL("/login", request.url));

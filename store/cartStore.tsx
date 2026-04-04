@@ -25,7 +25,7 @@ interface CartStore {
     addOrReplace: (supplierId: string, supplierName: string, item: CartItem) => void;
     increment: (supplierId: string, supplierName: string, item: CartItem) => void;
     decrement: (supplierId: string, supplierName: string, item: CartItem) => void;
-    getQty: (supplierId: string, productId: string) => number;
+    getQty: (supplierId: string, productId: string) => number | null;
     getVariantId: (supplierId: string, productId: string) => string | null;
     clearSupplierCart: (supplierId: string) => void;
     clearAll: () => void;
@@ -59,6 +59,7 @@ export const useCartStore = create<CartStore>()(
 
             // ➕ Increment — if not exists, create first
             increment: (supplierId, supplierName, item) => {
+
                 const cart = get().suppliers[supplierId];
                 if (!cart) {
                     // create new supplier entry
@@ -139,9 +140,10 @@ export const useCartStore = create<CartStore>()(
                 });
             },
 
-            getQty: (supplierId, productId) =>
-                get().suppliers[supplierId]?.items.find((x) => x.productId === productId)?.qty || 0,
-
+            getQty: (supplierId, productId) => {
+                const item = get().suppliers[supplierId]?.items.find((x) => x.productId == productId);
+                return item ? item.qty : 0; // keep 0 valid, not null
+            },
             getVariantId: (supplierId, productId) =>
                 get().suppliers[supplierId]?.items.find((x) => x.productId === productId)?.variantId ||
                 null,

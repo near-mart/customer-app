@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import { memo, useMemo } from "react";
 import useLocation from "@/features/home/hooks/useLocation";
 import { ArrowIcon, CartIcon, ProfileIcon } from "@/svgs";
 import { SearchIcon, X } from "lucide-react";
@@ -7,14 +7,27 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthValidator } from "@/store/authValidater";
+import { LocationModal } from "./model/location-modal";
+import { useModalControl } from "@/hooks/useModalControl";
+export const getWorkContext = () => {
+    const hour = new Date().getHours();
 
-export default function DesktopHeader({ searchMode, handleSearch }: any) {
+    if (hour >= 6 && hour < 12) return "☀️ Morning essentials run";
+    if (hour >= 12 && hour < 17) return "🍱 Midday refuel time";
+    if (hour >= 17 && hour < 22) return "🌇 Evening groceries & snacks";
+    return "🌙 Late night cravings delivery";
+};
+
+const DesktopHeader = ({ searchMode, handleSearch }: any) => {
     const { displayAddress } = useLocation();
     const { isAuthenticate } = useAuthValidator((state) => state)
     const { suppliers } = useCartStore(); // 🧺 supplier-wise cart
-    // 🧮 Compute totals across all suppliers
-    const allItems = Object.values(suppliers).flatMap((s) => s.items);
-    const totalQty = allItems.reduce((sum, item) => sum + item.qty, 0);
+    const totalQty = useMemo(() => {
+        return Object.values(suppliers)
+            .flatMap((s: any) => s.items || [])
+            .reduce((sum, item) => sum + (item.qty || 0), 0);
+    }, [suppliers]);
+    const { open, handleCloseModal, handleOpenModal } = useModalControl()
 
 
     return (
@@ -33,21 +46,20 @@ export default function DesktopHeader({ searchMode, handleSearch }: any) {
                 />
             </Link>
 
+            {open && <LocationModal open={open} setOpen={handleCloseModal} />}
             {/* --- Delivery Info --- */}
             <div className="flex flex-col justify-center max-w-[60%] sm:max-w-none">
                 <h2 className="flex items-center" data-testid="delivery-time">
                     <ArrowIcon className="w-6 h-6" />
                     <span className="ml-1 font-bold text-[#ef4372] text-base sm:text-lg">
-                        Tomorrow —{" "}
-                        <span className="font-bold text-[#ef4372]">
-                            Estimated delivery before 12
-                        </span>
+                        {getWorkContext()}
                     </span>
                 </h2>
 
                 <button
                     type="button"
                     className="flex items-center text-ellipsis overflow-hidden whitespace-nowrap"
+                    onClick={handleOpenModal}
                 >
                     <h3 className="text-sm sm:text-base font-semibold text-black truncate max-w-[400px]">
                         <span>{displayAddress}</span>
@@ -158,3 +170,6 @@ export default function DesktopHeader({ searchMode, handleSearch }: any) {
         </div>
     );
 }
+
+
+export default memo(DesktopHeader)

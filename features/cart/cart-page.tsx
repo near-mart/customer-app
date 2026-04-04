@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,12 +17,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight, Home, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
 export default function CartPage() {
     const queryClient = useQueryClient();
+
     const {
-        suppliers,
         increment,
         decrement,
         clearSupplierCart,
@@ -34,15 +33,19 @@ export default function CartPage() {
     const { data, isLoading } = useQuery({
         queryKey: ["getCart"],
         queryFn: ({ signal }) => getCart(signal),
+        refetchOnMount: true,         // ✅ Refetch when the component mounts
+        refetchOnWindowFocus: false,  // Avoid spam refetching when tab focus changes
+        staleTime: 0,
     });
+    useEffect(() => {
+        queryClient.invalidateQueries({ queryKey: ["getCart"] });
+    }, [queryClient]);
 
     // 🔁 Optimistic sync with backend
     const { mutateAsync } = useMutation({
         mutationFn: addToCart,
-        // ⚡ don’t immediately refetch on success — we handle it manually
         onSuccess: () => {
-            // optional background refresh (without UI blocking)
-            queryClient.invalidateQueries(["getCart"], { refetchType: "inactive" });
+            queryClient.invalidateQueries({ queryKey: ["getCart"] });
         },
     });
 
@@ -57,6 +60,41 @@ export default function CartPage() {
         []
     );
 
+    // ⚙️ Quantity logic — instantly reflect changes
+    const handleQtyChange = (group: any, item: any, product: any, newQty: number) => {
+        const variant = product.variants?.find((v: any) => v._id === item.variant_id);
+        if (!variant) return;
+
+        const cartItem = {
+            qty: newQty,
+            productId: product._id,
+            variantId: variant._id,
+            ...product,
+
+        };
+
+        if (newQty <= 0) {
+            decrement(group.supplier_id, group.supplier?.storeName, cartItem);
+        } else if (newQty > (getQty(group.supplier_id, product._id) || 0)) {
+            increment(group.supplier_id, group.supplier?.storeName, cartItem);
+        } else {
+            decrement(group.supplier_id, group.supplier?.storeName, cartItem);
+        }
+
+        // ♻️ Recalculate total locally
+        recalcTotal(group.supplier_id);
+
+        // 🔄 Sync in background
+        debouncedSync(group.supplier_id, product._id, variant._id, newQty);
+    };
+
+    const handleRemove = (group: any, item: any, product: any) => {
+        const variant = product.variants?.find((v: any) => v._id === item.variant_id);
+        if (!variant) return;
+        clearSupplierCart(group.supplier_id);
+        debouncedSync(group.supplier_id, product._id, variant._id, 0);
+    };
+    const cartData = data?._payload || [];
     // 🧱 Skeleton while loading
     if (isLoading)
         return (
@@ -84,7 +122,8 @@ export default function CartPage() {
             </div>
         );
 
-    const cartData = data?._payload || [];
+
+
 
     if (!cartData.length)
         return (
@@ -92,45 +131,6 @@ export default function CartPage() {
                 🛒 Your cart is empty
             </div>
         );
-
-    // ⚙️ Quantity logic — instantly reflect changes
-    const handleQtyChange = (group: any, item: any, product: any, newQty: number) => {
-        const variant = product.variants?.find((v: any) => v._id === item.variant_id);
-        if (!variant) return;
-
-        const cartItem = {
-            productId: product._id,
-            variantId: variant._id,
-            name: product.name,
-            price: variant.discount_price || variant.selling_price,
-            image: product.images?.[0]?.url,
-            unit: variant.unit,
-            selling_qty: variant.selling_qty,
-            qty: newQty,
-        };
-
-        // 🧠 Update Zustand store immediately for instant feedback
-        if (newQty <= 0) {
-            decrement(group.supplier_id, group.supplier?.storeName, cartItem);
-        } else if (newQty > getQty(group.supplier_id, product._id)) {
-            increment(group.supplier_id, group.supplier?.storeName, cartItem);
-        } else {
-            decrement(group.supplier_id, group.supplier?.storeName, cartItem);
-        }
-
-        // ♻️ Recalculate total locally
-        recalcTotal(group.supplier_id);
-
-        // 🔄 Sync in background
-        debouncedSync(group.supplier_id, product._id, variant._id, newQty);
-    };
-
-    const handleRemove = (group: any, item: any, product: any) => {
-        const variant = product.variants?.find((v: any) => v._id === item.variant_id);
-        if (!variant) return;
-        clearSupplierCart(group.supplier_id);
-        debouncedSync(group.supplier_id, product._id, variant._id, 0);
-    };
 
     return (
         <>
@@ -158,6 +158,7 @@ export default function CartPage() {
             <Accordion type="single" defaultValue="supplier-0" collapsible className="space-y-4">
                 {cartData.map((group: any, idx: number) => {
                     const supplierName = group.supplier?.storeName || "Unknown Supplier";
+                    const supplierHandle = group.supplier?.handle || "Unknown Supplier";
                     const supplierTotal = group.items.reduce((sum: number, item: any) => {
                         const product = item.product?.[0];
                         if (!product) return sum;
@@ -180,7 +181,7 @@ export default function CartPage() {
                                         <p className="font-semibold text-lg text-gray-800">
                                             {supplierName}
                                         </p>
-                                        <p className="text-sm text-gray-500">{group.supplier?.handle}</p>
+                                        <p className="text-sm text-gray-500">{supplierHandle}</p>
                                     </div>
                                 </Link>
                                 {/* <div className="text-right">
@@ -210,7 +211,7 @@ export default function CartPage() {
                                             const childCategory = product?.categories?.find(
                                                 (it) => it.parent != null
                                             );
-                                            const productUrl = `/store/${group.supplier?.handle}/${parentCategory?.handle}/${childCategory?.handle}/${product.handle}-${product._id}`;
+                                            const productUrl = `/store/${group.supplier?.handle}/${parentCategory?.handle}/${childCategory?.handle}/${product.handle}/${product._id}`;
 
                                             return (
                                                 <div
@@ -356,9 +357,11 @@ export default function CartPage() {
                                     <p className="text-gray-700 font-medium">
                                         Total: ₹{supplierTotal.toFixed(2)}
                                     </p>
-                                    <Button className="rounded-xl px-6 py-2 text-base w-full md:w-auto">
-                                        Checkout from {supplierName.split(" ")[0]}
-                                    </Button>
+                                    <Link href={`/checkout/${supplierHandle}`}>
+                                        <Button className="rounded-xl px-6 py-2 text-base w-full md:w-auto">
+                                            Checkout from {supplierName}
+                                        </Button>
+                                    </Link>
                                 </div>
                             </AccordionContent>
                         </AccordionItem>

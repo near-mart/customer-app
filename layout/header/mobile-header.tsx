@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, memo } from "react";
 import useLocation from "@/features/home/hooks/useLocation";
 import { ArrowIcon, CartIcon, ProfileIcon } from "@/svgs";
 import { SearchIcon, X } from "lucide-react";
@@ -7,18 +7,26 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthValidator } from "@/store/authValidater";
+import { getWorkContext } from "./desktop-header";
+import { useModalControl } from "@/hooks/useModalControl";
+import { LocationModal } from "./model/location-modal";
 
-export default function MobileHeader({ searchMode, handleSearch }: any) {
+const MobileHeader = ({ searchMode, handleSearch }: any) => {
     const { isAuthenticate } = useAuthValidator((state) => state)
     const { displayAddress } = useLocation();
     const { suppliers } = useCartStore(); // ✅ supplier-wise cart
-    const allItems = Object.values(suppliers).flatMap((s) => s.items);
-    const totalQty = allItems.reduce((sum, item) => sum + item.qty, 0);
+    const totalQty = useMemo(() => {
+        return Object.values(suppliers)
+            .flatMap((s: any) => s.items || [])
+            .reduce((sum, item) => sum + (item.qty || 0), 0);
+    }, [suppliers]);
 
+    const { open, handleCloseModal, handleOpenModal } = useModalControl()
 
     return (
         <div className="flex flex-col p-4 lg:hidden pb-0 relative">
             {/* --- Header Row --- */}
+            {open && <LocationModal open={open} setOpen={handleCloseModal} />}
             <div className="flex justify-between items-center w-full">
                 {/* 🏪 Logo */}
                 <Link aria-label="Near Mart Home" href="/" className="shrink-0">
@@ -74,14 +82,11 @@ export default function MobileHeader({ searchMode, handleSearch }: any) {
             </div>
 
             {/* --- Delivery Info --- */}
-            <div className="flex flex-col mt-2">
+            <div className="flex flex-col mt-2 cursor-default" onClick={handleOpenModal}>
                 <h2 className="flex items-center" data-testid="delivery-time">
                     <ArrowIcon className="w-6 h-6" />
                     <span className="ml-1 font-bold text-[#ef4372] text-sm md:text-base flex flex-wrap items-center gap-x-1">
-                        <span className="block">Tomorrow — </span>
-                        <span className="block font-bold text-[#ef4372]">
-                            Estimated delivery before 12
-                        </span>
+                        {getWorkContext()}
                     </span>
                 </h2>
 
@@ -160,3 +165,6 @@ export default function MobileHeader({ searchMode, handleSearch }: any) {
         </div>
     );
 }
+
+
+export default memo(MobileHeader)

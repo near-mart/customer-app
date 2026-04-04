@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   env: {
     BASE_URL: process.env.BASE_URL,
+    MAP_KEY: process.env.MAP_KEY,
   },
   typescript: {
     // ⚠️ Danger: This allows production builds even if there are type errors.
@@ -16,7 +17,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'd9vq65k2xdbyr.cloudfront.net',
+        hostname: 'd192vb5vsy7q58.cloudfront.net',
         pathname: '/**',
       },
       {

@@ -16,7 +16,6 @@ api.interceptors.request.use(
             try {
                 const { exp }: { exp: number } = jwtDecode(token);
                 if (exp < Date.now() / 1000 && config.url !== 'auth/refresh-token') {
-                    await fetchRefreshToken({ user: localStorage.getItem("user") })
                 }
             } catch (err) {
                 console.log(err);
@@ -49,6 +48,12 @@ api.interceptors.response.use(
         const originalRequest = error.config;
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
             localStorage.clear()
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c
+                    .replace(/^ +/, "")
+                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+
             notify("Un Authorized Request")
             window.location.replace("/login");
         }

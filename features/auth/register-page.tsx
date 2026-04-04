@@ -11,6 +11,10 @@ import axios from "axios";
 import { useAuthValidator } from "@/store/authValidater";
 import { useRouter } from "next/navigation";
 import { notify } from "@/functions/notify";
+import { useBookmarkStore } from "@/store/bookmarkStore";
+import { supplierBookMarkMerge } from "@/services/suppliers";
+import { useCartStore } from "@/store/cartStore";
+import { mergeCart } from "@/services/products";
 
 export default function RegisterPage() {
     const { handleAuthenticate, handleUserDetails } = useAuthValidator((state) => state);
@@ -104,6 +108,28 @@ export default function RegisterPage() {
                 localStorage.setItem("user", rest?.user?._id);
                 handleUserDetails(rest.user);
                 handleAuthenticate(true);
+
+                const localBookmarks = useBookmarkStore.getState().bookmarks;
+                if (localBookmarks.length > 0) {
+                    try {
+                        await supplierBookMarkMerge({ supplier_ids: localBookmarks });
+                        useBookmarkStore.getState().clearBookmarks();
+                        console.log("✅ Local bookmarks merged successfully");
+                    } catch (err) {
+                        console.error("Failed to merge bookmarks:", err);
+                    }
+                }
+
+                const localCart = useCartStore.getState().suppliers;
+                if (Object.keys(localCart).length > 0) {
+                    try {
+                        await mergeCart({ suppliers: localCart });
+                        useCartStore.getState().clearAll();
+                        console.log("✅ Local cart merged successfully");
+                    } catch (err) {
+                        console.error("❌ Failed to merge cart:", err);
+                    }
+                }
                 notify("Registration successful", "success");
                 route.replace("/");
             }

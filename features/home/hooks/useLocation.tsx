@@ -8,16 +8,12 @@ export default function useLocation() {
     useEffect(() => {
         async function fetchAddress() {
             try {
-                const GOOGLE_API_KEY = "AIzaSyAMaoFT75bVo6fDtCV1NdgKlIb35yV7ZD8";
-                // const response = await fetch(`https://www.googleapis.com/geolocation/v1/geolocate?key=${GOOGLE_API_KEY}`, {
-                //     method: "POST",
-                // });
-                // const { location } = await response.json();
-                // console.log(location);
+                const GOOGLE_API_KEY = process.env.MAP_KEY;
                 const saved = localStorage.getItem("user_address");
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     setDisplayAddress(parsed.display_short || `${parsed.city}, ${parsed.state}`);
+                    return
                 }
 
                 if ("geolocation" in navigator) {

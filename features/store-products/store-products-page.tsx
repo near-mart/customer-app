@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import ProductSkeleton from "@/components/product-skeleton";
 import { useRouter, useSearchParams } from "next/navigation";
 import { debounce } from "lodash";
 import { AutoOpenTooltip } from "@/components/auto-open-tooltip";
+import { Input } from "@/components/ui/input";
 
 export default function StoreProductsPage({ handle }: { handle: string }) {
     const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -57,7 +58,6 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
         enabled: !!supplier?._id,
     });
 
-    // 🧩 Products
     const { data: products, isLoading: productLoading } = useQuery({
         queryKey: ["fetchProducts", supplier?._id, locationData?.latitude, locationData?.longitude, query],
         queryFn: ({ signal }) =>
@@ -71,6 +71,7 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
             }),
         enabled: !!supplier?._id,
     });
+
     const handleSearch = useCallback(
         debounce((value) => {
             const params = new URLSearchParams(window.location.search);
@@ -81,6 +82,7 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
         }, 600),
         []
     );
+
     const { data: featuredProducts, isLoading: featuredProductLoading } = useQuery({
         queryKey: ["fetchProducts", 0, 15, supplier?._id, locationData?.latitude, locationData?.longitude, true],
         queryFn: ({ signal }) =>
@@ -165,7 +167,7 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
 
     // 🏪 Main Page After Loading
     return (
-        <section className="px-4 py-8 max-w-7xl mx-auto">
+        <section className="px-4 py-4 max-w-7xl mx-auto">
             {/* Breadcrumbs */}
 
             <nav
@@ -262,108 +264,44 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
                     {/* 🔄 Horizontal scroll container */}
                     <div className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth pb-3">
                         {featuredProductLoading
-                            ? Array.from({ length: 6 }).map((_, i) => (
-                                <ProductSkeleton key={i} />
-                            ))
+                            ? Array.from({ length: 6 }).map((_, i) => <ProductSkeleton key={i} />)
                             : featuredProducts?._payload?.map((p) => (
-                                <div key={p._id} className="min-w-40 sm:min-w-[200px] md:min-w-[220px] shrink-0">
+                                <div
+                                    key={p._id}
+                                    className="shrink-0 w-40 sm:w-[200px] md:w-[220px]"
+                                >
                                     <ProductCard product={p} deliveryNotAllow={p.deliveryNotAllowed} />
                                 </div>
                             ))}
                     </div>
 
+
                 </>
             )}
-            {/* 🧭 Categories */}
-            {categories.map((parent: any) => {
 
-                return (
-                    <div key={parent._id} className="mb-10">
-                        <Link
-                            href={`/store/${handle}/${parent.handle}/all`}
-                            className="block text-lg font-bold mb-4 text-primary hover:underline transition"
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-bold text-primary hover:text-green-700 hover:underline  transition">
-                                    {parent.name}
-                                </h2>
-
-                                <span className="text-sm text-primary hover:text-green-700  ">
-                                    View All →
-                                </span>
-                            </div>
-                        </Link>
-
-                        {/* 🧭 Uniform Scrollable Row */}
-                        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 scroll-smooth">
-                            {parent.children?.length > 0 ? (
-                                parent.children.map((child: any) => {
-                                    const createdDate = new Date(child.createdAt);
-                                    const daysSinceCreated = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
-                                    const isNew = daysSinceCreated <= 30;
-                                    return (
-                                        <Link
-                                            href={`/store/${handle}/${parent.handle}/${child.handle}`}
-                                            key={child._id}
-                                            onClick={() => setActiveCategory(child._id)}
-                                            className={`relative flex flex-col items-center bg-white rounded-xl shadow-sm hover:shadow-md transition p-3 border border-gray-100 shrink-0 w-40 sm:w-[180px] lg:w-[200px] ${activeCategory === child._id ? "ring-2 ring-green-500" : ""}`}
-                                        >
-                                            {/* 🏷️ NEW Badge */}
-                                            {isNew && <span className="absolute top-2 left-2 z-10 bg-purple-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-md">
-                                                NEW
-                                            </span>}
-
-                                            {/* 🖼️ Category Image */}
-                                            <div className="w-20 h-20 sm:w-24 sm:h-24 relative mb-2">
-                                                <Image
-                                                    src={
-                                                        child.image || parent.image || "/category-placeholder.svg"
-                                                    }
-                                                    alt={child.name}
-                                                    fill
-                                                    className="object-contain rounded-lg bg-gray-50"
-                                                />
-                                            </div>
-
-                                            {/* 📛 Category Name */}
-                                            <p className="text-center text-sm sm:text-base font-medium text-gray-800 line-clamp-2">
-                                                {child.name}
-                                            </p>
-                                        </Link>
-                                    )
-                                })
-                            ) : (
-                                <div className="text-gray-500 text-sm italic col-span-full text-center py-4">
-                                    No subcategories available
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )
-            })}
 
 
 
 
             <>
-                <div className="flex justify-between items-center  flex-wrap gap-4">
+                <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
                     <Link
                         href={`/store/${handle}/all-products`}
                         className="flex items-center text-pink-600 text-sm font-bold hover:text-pink-700 transition"
 
                     >
-                        <h2 className="text-md md:text-xl font-bold text-gray-800">
+                        <h2 className="text-md md:text-xl font-bold text-primary hover:text-pink-600">
                             Popular Products from {supplier?.storeName}
                         </h2>
                     </Link>
-                    <div className="mb-6 relative w-full md:w-1/2">
+                    <div className="relative w-full md:w-1/2">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <input
+                        <Input
                             type="text"
                             placeholder="Search products..."
                             defaultValue={initialQuery}
                             onChange={(e) => handleSearch(e.target.value)}
-                            className="w-full border bg-white border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
+                            className="w-full border bg-white pl-10 pr-4 py-2 "
                         />
                     </div>
                 </div>
@@ -391,6 +329,66 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
                 </div>
 
             </>
+
+            {/* 🧭 Categories Section */}
+            {categories.map((parent: any) => (
+                <div key={parent._id} className="mb-2 mt-4">
+                    <Link
+                        href={`/store/${handle}/${parent.handle}/all`}
+                        className="block group"
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-base sm:text-lg md:text-xl font-bold text-primary group-hover:text-pink-600 transition">
+                                {parent.name}
+                            </h2>
+                            <span className="text-xs sm:text-sm text-primary group-hover:text-green-700 transition">
+                                View All →
+                            </span>
+                        </div>
+                    </Link>
+                    <div className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth">
+                        {parent.children?.length > 0 ? (
+                            parent.children.map((child: any) => {
+                                const createdDate = new Date(child.createdAt);
+                                const daysSinceCreated =
+                                    (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+                                const isNew = daysSinceCreated <= 30;
+
+                                return (
+                                    <Link
+                                        href={`/store/${handle}/${parent.handle}/${child.handle}`}
+                                        key={child._id}
+                                        onClick={() => setActiveCategory(child._id)}
+                                        className={`relative flex flex-col items-center bg-white rounded-xl shadow-sm hover:shadow-md transition p-3 border border-gray-100 shrink-0 w-[38vw] sm:w-[30vw] md:w-[180px] lg:w-[200px] xl:w-[220px] ${activeCategory === child._id ? "ring-2 ring-green-500" : ""
+                                            }`}
+                                    >
+                                        {isNew && (
+                                            <span className="absolute top-2 left-2 z-10 bg-purple-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-md">
+                                                NEW
+                                            </span>
+                                        )}
+                                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 relative mb-2">
+                                            <Image
+                                                src={child.image || parent.image || "/category-placeholder.svg"}
+                                                alt={child.name}
+                                                fill
+                                                className="object-contain rounded-lg bg-gray-50"
+                                            />
+                                        </div>
+                                        <p className="text-center text-[12px] sm:text-sm md:text-base font-medium text-gray-800 line-clamp-2">
+                                            {child.name}
+                                        </p>
+                                    </Link>
+                                );
+                            })
+                        ) : (
+                            <div className="text-gray-500 text-sm italic col-span-full text-center py-4 w-full">
+                                No subcategories available
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ))}
         </section>
     );
 }
