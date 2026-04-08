@@ -12,18 +12,24 @@ import { notify } from '@/functions/notify';
 import { SelectedItems } from './selected-items';
 import { Button } from '@/components/ui/button';
 import { DeliveryTip } from './delivery-tip';
-import { getOrderTiming } from '@/services/checkout';
-import useFetchUser from '@/hooks/useFetchUser';
+import { createOnlineOrder, getOrderTiming } from '@/services/checkout';
+import { useFetchUser } from '@/hooks/useFetchUser';
+import { useAuthValidator } from '@/store/authValidater';
+import { useRouter } from 'next/navigation';
+import { calculateDeliveryCharges } from '@/utils/delivery';
+import { useCartStore } from '@/store/cartStore';
 
 export function CheckOut({ store }: any) {
-    // useFetchUser()
-    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
     const [discountAmount, setDiscountAmount] = useState(0);
-    const [freeProductCoupon, setFreeProductCoupon] = useState(null);
+    const [freeProductCoupon, setFreeProductCoupon] = useState<any>(null);
     const [tip, setTip] = useState(0);
+    const { isAuthenticate } = useAuthValidator();
+    const router = useRouter();
+    const { data: userData } = useFetchUser();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { locationData } = useLocationStore();
-    console.log(locationData, "locationData");
 
 
     const handleApplyCoupon = (coupon: any) => {
@@ -109,14 +115,21 @@ export function CheckOut({ store }: any) {
 
     const { data: timing } = useQuery({
         queryKey: ["getOrderTiming", supplier?._id || "", deliveryInfo?.max_delivery_km],
-        queryFn: ({ signal }) => getOrderTiming(signal, supplier?._id, supplier?.address?.latitude, supplier?.address?.longitude, locationData?.latitude, locationData?.longitude, deliveryInfo?.max_delivery_km),
+        queryFn: ({ signal }) => getOrderTiming(
+            signal,
+            supplier?._id,
+            supplier?.address?.latitude,
+            supplier?.address?.longitude,
+            locationData?.latitude,
+            locationData?.longitude,
+            deliveryInfo?.max_delivery_km || 0
+        ),
         enabled: !!(supplier?._id && deliveryInfo),
     });
-    console.log(timing, "timing");
 
 
 
-    const [selectedSupplier, setSelectedSupplier] = useState([])
+    const [selectedSupplier, setSelectedSupplier] = useState<any[]>([])
     const { data } = useQuery({
         queryKey: ["getCart"],
         queryFn: ({ signal }) => getCart(signal),
@@ -140,9 +153,98 @@ export function CheckOut({ store }: any) {
 
     const finalTotal = Math.max(0, supplierTotal - discountAmount);
 
-    const onSubmit = () => {
+    const { clearSupplierCart } = useCartStore();
+    const onSubmit = async () => {
+        if (!isAuthenticate) {
+            notify("Please login to place your order", "error");
+            return;
+        }
 
-    }
+        if (!selectedSupplier[0] || !supplier) {
+            notify("No items in cart", "error");
+            return;
+        }
+
+        const deliveryConfig = {
+            ...supplier?.address,
+            ...deliveryInfo,
+            distKm: supplier?.distKm,
+            distance_km: supplier?.distance_km
+        };
+
+        const deliveryData = calculateDeliveryCharges({
+            supplierTotal,
+            delivery: deliveryConfig,
+        });
+
+        if (!deliveryData.isDeliverable) {
+            notify(deliveryData.message, "error");
+            return;
+        }
+
+        if (!locationData) {
+            notify("Please select a delivery location first", "error");
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            const items = selectedSupplier[0].items.map((item: any) => ({
+                productId: item.product?.[0]?._id,
+                variantId: item.variant_id,
+                qty: item.qty
+            }));
+
+            const orderData = {
+                items,
+                name: userData?.name || "Customer",
+                mobile: userData?.mobile,
+                email: userData?.email,
+                countryCode: userData?.countryCode || "91",
+                discount: discountAmount,
+                couponCode: appliedCoupon?.code,
+                payment_mode: "cod",
+                isDeliveryFee: deliveryData.deliveryFee > 0,
+                isPackagingFee: deliveryData.packingCharge > 0,
+                isPlatformFee: true,
+                address: locationData ? JSON.stringify(locationData) : "Selected Location",
+                note: "",
+                status: "completed",
+                fulfillment: "delivery",
+                channel: "online"
+            };
+
+            const idempotencyKey = `ord_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+            const response = await createOnlineOrder(orderData, supplier._id, idempotencyKey);
+
+            if (response?.success) {
+                notify("Order placed successfully!", "success");
+                clearSupplierCart(supplier._id);
+                router.replace("/account/orders");
+            } else {
+                notify(response?.message || "Failed to place order", "error");
+            }
+        } catch (err: any) {
+            notify(err?.response?.data?.message || "Something went wrong", "error");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const checkoutDeliveryConfig = {
+        ...supplier?.address,
+        ...deliveryInfo,
+        distKm: supplier?.distKm,
+        distance_km: supplier?.distance_km
+    };
+
+    const checkoutDeliveryData = calculateDeliveryCharges({
+        supplierTotal,
+        delivery: checkoutDeliveryConfig
+    });
+
+    const totalToPay = finalTotal + checkoutDeliveryData.deliveryFee + checkoutDeliveryData.packingCharge + tip;
 
     return (
         <div className='mb-30'>
@@ -182,14 +284,14 @@ export function CheckOut({ store }: any) {
                 originalTotal={supplierTotal}
                 supplierTotal={finalTotal}
                 discountAmount={discountAmount}
-                deliveryConfig={{ ...supplier?.address, ...deliveryInfo, distKm: supplier?.distKm, distance_km: supplier?.distance_km }}
+                deliveryConfig={checkoutDeliveryConfig}
                 locationData={locationData}
                 appliedCoupon={appliedCoupon}
                 freeProductCoupon={freeProductCoupon}
                 tip={tip}
             />}
             <DeliveryTip tip={tip} setTip={setTip} />
-            <PayFooter amount={finalTotal} onPay={onSubmit} />
+            <PayFooter amount={totalToPay} onPay={onSubmit} disabled={isSubmitting} />
 
         </div>
     )

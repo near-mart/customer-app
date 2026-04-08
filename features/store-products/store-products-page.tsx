@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -101,10 +101,16 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
 
     const categories = categoriesData?._payload || [];
 
-    // 🧮 Delivery availability check
-    const supplierDistance = +supplier?.distKm || 0;
-    const maxDeliveryKm = deliveryInfo?.max_delivery_km || 0;
-    const deliveryNotAvailable = supplierDistance && maxDeliveryKm && supplierDistance > maxDeliveryKm;
+    // 🧮 Memoized Delivery Availability
+    const { supplierDistance, maxDeliveryKm, deliveryNotAvailable } = useMemo(() => {
+        const dist = +supplier?.distKm || 0;
+        const max = deliveryInfo?.max_delivery_km || 0;
+        return {
+            supplierDistance: dist,
+            maxDeliveryKm: max,
+            deliveryNotAvailable: dist && max && dist > max
+        };
+    }, [supplier?.distKm, deliveryInfo?.max_delivery_km]);
 
     // 🦴 Skeleton Loader
     if (supplierLoading || categoryLoading || deliveryLoading) {
@@ -231,7 +237,7 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
             </h1>
 
             {/* 🚚 Delivery Availability */}
-            {deliveryNotAvailable > 0 && (
+            {deliveryNotAvailable && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm md:text-base">
                     ❌ Sorry, delivery is not available in your area. <br />
                     This store only delivers within {maxDeliveryKm} km radius, but your
@@ -278,77 +284,72 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
 
                 </>
             )}
+            {/* 🛒 Popular Products / All Items Section */}
+            {(products?._payload?.length > 0 || initialQuery || query) && (
+                <div className="mt-8 mb-12">
+                    <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+                        <Link
+                            href={`/store/${handle}/all-products`}
+                            className="flex items-center text-pink-600 text-sm font-bold hover:text-pink-700 transition"
+                        >
+                            <h2 className="text-md md:text-xl font-bold text-primary hover:text-pink-600">
+                                Popular Products from {supplier?.storeName}
+                            </h2>
+                        </Link>
+                        <div className="relative w-full md:w-1/2">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <Input
+                                type="text"
+                                placeholder="Search products..."
+                                defaultValue={initialQuery}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                className="w-full border bg-white pl-10 pr-4 py-2"
+                            />
+                        </div>
+                    </div>
 
-
-
-
-
-            <>
-                <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-                    <Link
-                        href={`/store/${handle}/all-products`}
-                        className="flex items-center text-pink-600 text-sm font-bold hover:text-pink-700 transition"
-
-                    >
-                        <h2 className="text-md md:text-xl font-bold text-primary hover:text-pink-600">
-                            Popular Products from {supplier?.storeName}
-                        </h2>
-                    </Link>
-                    <div className="relative w-full md:w-1/2">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <Input
-                            type="text"
-                            placeholder="Search products..."
-                            defaultValue={initialQuery}
-                            onChange={(e) => handleSearch(e.target.value)}
-                            className="w-full border bg-white pl-10 pr-4 py-2 "
-                        />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {productLoading ? (
+                            Array.from({ length: 10 }).map((_, i) => <ProductSkeleton key={i} />)
+                        ) : products?._payload?.length > 0 ? (
+                            products._payload.map((p) => (
+                                <ProductCard
+                                    key={p._id}
+                                    product={p}
+                                    deliveryNotAllow={p.deliveryNotAllowed}
+                                />
+                            ))
+                        ) : (
+                            <div className="col-span-full flex flex-col items-center justify-center py-16 text-gray-500">
+                                <Search className="w-10 h-10 mb-3 text-gray-400" />
+                                <p className="text-sm md:text-base">No products found for your search.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {productLoading ? (
-                        // 🦴 Show skeletons while loading
-                        Array.from({ length: 10 }).map((_, i) => <ProductSkeleton key={i} />)
-                    ) : products?._payload?.length > 0 ? (
-                        // 🛒 Render actual products
-                        products._payload.map((p) => (
-                            <ProductCard
-                                key={p._id}
-                                product={p}
-                                deliveryNotAllow={p.deliveryNotAllowed}
-                            />
-                        ))
-                    ) : (
-                        // 🚫 No products found
-                        <div className="col-span-full flex flex-col items-center justify-center py-16 text-gray-500">
-                            <Search className="w-10 h-10 mb-3 text-gray-400" />
-                            <p className="text-sm md:text-base">No products found for your search.</p>
-                        </div>
-                    )}
-                </div>
-
-            </>
+            )}
 
             {/* 🧭 Categories Section */}
-            {categories.map((parent: any) => (
-                <div key={parent._id} className="mb-2 mt-4">
-                    <Link
-                        href={`/store/${handle}/${parent.handle}/all`}
-                        className="block group"
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-base sm:text-lg md:text-xl font-bold text-primary group-hover:text-pink-600 transition">
-                                {parent.name}
-                            </h2>
-                            <span className="text-xs sm:text-sm text-primary group-hover:text-green-700 transition">
-                                View All →
-                            </span>
-                        </div>
-                    </Link>
-                    <div className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth">
-                        {parent.children?.length > 0 ? (
-                            parent.children.map((child: any) => {
+            {categories.map((parent: any) => {
+                if (!parent.children || parent.children.length === 0) return null;
+
+                return (
+                    <div key={parent._id} className="mb-2 mt-4">
+                        <Link
+                            href={`/store/${handle}/${parent.handle}/all`}
+                            className="block group"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-base sm:text-lg md:text-xl font-bold text-primary group-hover:text-pink-600 transition">
+                                    {parent.name}
+                                </h2>
+                                <span className="text-xs sm:text-sm text-primary group-hover:text-green-700 transition">
+                                    View All →
+                                </span>
+                            </div>
+                        </Link>
+                        <div className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth">
+                            {parent.children.map((child: any) => {
                                 const createdDate = new Date(child.createdAt);
                                 const daysSinceCreated =
                                     (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -380,15 +381,11 @@ export default function StoreProductsPage({ handle }: { handle: string }) {
                                         </p>
                                     </Link>
                                 );
-                            })
-                        ) : (
-                            <div className="text-gray-500 text-sm italic col-span-full text-center py-4 w-full">
-                                No subcategories available
-                            </div>
-                        )}
+                            })}
+                        </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
         </section>
     );
 }

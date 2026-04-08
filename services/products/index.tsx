@@ -18,7 +18,7 @@ export const fetchProductsById = async (signal: any, product: string, params: {}
         console.log(err);
     }
 }
-export const addToCart = async (data) => {
+export const addToCart = async (data: any) => {
     try {
         const response = await api.put("/service/order_service/v1/add-to-cart", data)
         return response.data
@@ -26,7 +26,7 @@ export const addToCart = async (data) => {
         console.log(err);
     }
 }
-export const toggleWishlist = async (data) => {
+export const toggleWishlist = async (data: any) => {
     try {
         const response = await api.put("/service/catalogue_service/v1/wishlist/toggle", data)
         return response.data

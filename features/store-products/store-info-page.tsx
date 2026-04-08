@@ -80,7 +80,7 @@ export default function StoreInfoPage({ handle }) {
         );
 
     // 🕒 Convert "HH:mm" → "hh:mm AM/PM"
-    const formatTo12Hour = (timeStr) => {
+    const formatTo12Hour = (timeStr: string) => {
         if (!timeStr) return "";
         const [hour, minute] = timeStr.split(":").map(Number);
         const suffix = hour >= 12 ? "PM" : "AM";
@@ -89,7 +89,7 @@ export default function StoreInfoPage({ handle }) {
     };
 
     return (
-        <section className="min-h-screen my-6">
+        <section className="min-h-screen">
             <div className="md:max-w-3xl mx-auto bg-white/80 backdrop-blur-md rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
                 {/* 🌆 Banner */}
                 <div className="relative h-70 w-full">

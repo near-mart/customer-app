@@ -38,16 +38,15 @@ export const useCartStore = create<CartStore>()(
             suppliers: {},
             lastAction: null,
 
-            // 🛒 Add or replace product
             addOrReplace: (supplierId, supplierName, item) => {
+
                 const cart = get().suppliers[supplierId] || {
                     supplierId,
                     supplierName,
                     items: [],
-                    totalAmount: 0,
                 };
                 const filtered = cart.items.filter((x) => x.productId !== item.productId);
-                const updatedItems = [...filtered, { ...item, qty: 1 }];
+                const updatedItems = [...filtered, { ...item, qty: item.qty || 1 }];
                 set({
                     suppliers: {
                         ...get().suppliers,
